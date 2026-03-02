@@ -222,6 +222,38 @@
             color: #444;
             letter-spacing: 0.03em;
         }
+
+        #graph-canvas {
+            display: none;
+            width: 100%;
+            height: 400px;
+            border: 1px solid rgba(68, 170, 255, 0.2);
+            border-radius: 6px;
+        }
+
+        #graph-labels {
+            display: none;
+            padding: 0 4%;
+            height: 72px;
+            overflow: hidden;
+        }
+
+        #graph-labels > div {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            overflow: visible;
+        }
+
+        #graph-labels > div > span {
+            display: block;
+            font-size: 0.6em;
+            color: #666;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+            transform: rotate(-55deg);
+            transform-origin: top center;
+        }
     </style>
 </head>
 <body>
@@ -234,10 +266,11 @@
             <option value="npv">NPV — 10% deferred rebate</option>
             <option value="lowest">Lowest 5 — cheapest after rebate + financing, CAD &rarr; EUR</option>
             <option value="string">String — uppercase + &ldquo; MODEL&rdquo; suffix</option>
+            <option value="graph">Graph — avg price per nameplate</option>
         </select>
     </div>
 
-    <div class="calc-select-row">
+    <div class="calc-select-row" id="count-row">
         <span class="calc-label">Entries</span>
         <select id="count-select">
             <option value="10">10</option>
@@ -247,6 +280,25 @@
             <option value="100000">100 000</option>
             <option value="1000000" selected>1 000 000</option>
             <option value="10000000">10 000 000</option>
+        </select>
+    </div>
+
+    <div class="calc-select-row" id="graph-points-row" style="display:none;">
+        <span class="calc-label">Data rows</span>
+        <select id="graph-points-select">
+            <option value="100">100</option>
+            <option value="1000" selected>1 000</option>
+            <option value="10000">10 000</option>
+            <option value="100000">100 000</option>
+            <option value="1000000">1 000 000</option>
+        </select>
+    </div>
+
+    <div class="calc-select-row" id="graph-type-row" style="display:none;">
+        <span class="calc-label">Chart type</span>
+        <select id="graph-type-select">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
         </select>
     </div>
 
@@ -291,6 +343,8 @@
                 <span class="timing-chip gpu-chip pending" id="timing-gpu">—</span>
             </div>
             <div class="table-wrapper">
+                <canvas id="graph-canvas"></canvas>
+                <div id="graph-labels"></div>
                 <table class="custom-table">
                     <thead>
                         <tr class="table-head-row">
@@ -307,7 +361,7 @@
         </div>
 
         <!-- ── JS column ────────────────────────────────────────────── -->
-        <div class="column">
+        <div class="column" id="js-column">
             <div class="column-header">
                 <span class="column-title">JavaScript</span>
                 <span class="timing-chip js-chip pending" id="timing-js">—</span>

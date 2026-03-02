@@ -2,6 +2,7 @@ import { CalculatorCompute } from './compute';
 import { generateMockData } from './mock';
 import { resolveTimingCard, pendingCard, populateTable, populateStringTable } from './utils/renderer';
 import { STRING_STRIDE } from './shaders/stringShader';
+import { GraphRenderer } from './utils/graphRenderer';
 
 // How many rows to show in the NPV table (full 1 M would be impractical).
 const DISPLAY_ROWS = 100;
@@ -140,6 +141,22 @@ function lowestFormulaHTML(rate: number, eurRate: number, years: number): string
         &nbsp;&rarr;&nbsp; compound factor <span>${factor}</span>.<br>
         The GPU transforms all 10&nbsp;000 prices in a single dispatch.
         The CPU sorts in O(n&nbsp;log&nbsp;n) to find the 5 cheapest financed price in EUR.
+    </div>`;
+}
+
+function graphFormulaHTML(count: number, type: 'bar' | 'line'): string {
+    return `
+    <div class="formula-title">Calculation — Average price (CAD) per nameplate, GPU render pipeline</div>
+    <div class="formula-line">${type === 'bar' ? 'Bar chart' : 'Line chart'} &mdash; ${count.toLocaleString('en-CA')} rows &rarr; 20 averaged data points</div>
+    <div class="formula-vars">
+        Each of the <span>20</span> nameplates is averaged over its share of the
+        <span>${count.toLocaleString('en-CA')}</span> generated rows (deterministic &plusmn;$5&nbsp;000 variation).<br>
+        The GPU renders the result directly via a <span>render pipeline</span>
+        (vertex&nbsp;+&nbsp;fragment shaders, no readback).<br>
+        <span>vs_${type}</span>: instanced geometry — ${type === 'bar'
+            ? '6&nbsp;vertices &times; 20 bar instances (two triangles per bar)'
+            : '6&nbsp;vertices &times; 19 segment instances (perpendicular-offset quads)'}.
+        Colour gradient: cyan (low) &rarr; warm (high).
     </div>`;
 }
 
@@ -290,6 +307,60 @@ async function runString(compute: CalculatorCompute, count: number): Promise<voi
     });
 }
 
+// ── Graph show/hide ────────────────────────────────────────────────────────────
+const graphCanvas      = document.getElementById('graph-canvas')      as HTMLCanvasElement;
+const graphLabels      = document.getElementById('graph-labels')      as HTMLElement;
+const jsColumn         = document.getElementById('js-column')         as HTMLElement;
+const gpuTable         = graphCanvas.nextElementSibling               as HTMLElement; // <table>
+const gpuTableNote     = document.getElementById('table-note-gpu')    as HTMLElement;
+const countRow         = document.getElementById('count-row')         as HTMLElement;
+const graphPointsRow   = document.getElementById('graph-points-row')  as HTMLElement;
+const graphTypeRow     = document.getElementById('graph-type-row')    as HTMLElement;
+const timingEurCard    = document.getElementById('timing-eur')!.closest<HTMLElement>('.timing-card')!;
+
+function showGraphMode(visible: boolean): void {
+    graphCanvas.style.display    = visible ? 'block' : 'none';
+    graphLabels.style.display    = visible ? 'flex'  : 'none';
+    gpuTable.style.display       = visible ? 'none'  : '';
+    gpuTableNote.style.display   = visible ? 'none'  : '';
+    jsColumn.style.display       = visible ? 'none'  : '';
+    countRow.style.display       = visible ? 'none'  : 'flex';
+    graphPointsRow.style.display = visible ? 'flex'  : 'none';
+    graphTypeRow.style.display   = visible ? 'flex'  : 'none';
+    timingEurCard.style.display  = visible ? 'none'  : '';
+}
+
+async function runGraph(renderer: GraphRenderer, count: number, type: 'bar' | 'line'): Promise<void> {
+    // JS generates the raw price rows; GPU will compute the per-nameplate averages.
+    const { prices: rawPrices, graphData } = generateMockData(count);
+
+    // Use JS-side averages only to derive display bounds — GPU recomputes the averages.
+    const jsVals = graphData.map(p => p.value);
+    const lo   = Math.min(...jsVals);
+    const hi   = Math.max(...jsVals);
+    const pad  = (hi - lo) * 0.08;
+    const minVal = lo - pad;
+    const maxVal = hi + pad;
+
+    setFormulaBlock(graphFormulaHTML(count, type));
+    resolveTimingCard('timing-count', count.toLocaleString('en-CA'));
+    pendingCard('timing-gpu');
+
+    showGraphMode(true);
+
+    // Populate nameplate labels — one per bar/point, aligned via equal flex slots.
+    graphLabels.innerHTML = graphData
+        .map(p => `<div><span title="${p.label}">${p.label}</span></div>`)
+        .join('');
+
+    // Size the canvas to its CSS layout dimensions × device pixel ratio for crispness.
+    graphCanvas.width  = graphCanvas.clientWidth  * devicePixelRatio;
+    graphCanvas.height = graphCanvas.clientHeight * devicePixelRatio;
+
+    const { gpuTimeMs } = await renderer.render(rawPrices, type, minVal, maxVal);
+    resolveTimingCard('timing-gpu', `${gpuTimeMs.toFixed(3)} ms`);
+}
+
 // ── Entry point ────────────────────────────────────────────────────────────────
 async function main(): Promise<void> {
     if (!navigator.gpu) {
@@ -304,6 +375,7 @@ async function main(): Promise<void> {
     if (!adapter) throw new Error('No WebGPU adapter found.');
     const device  = await adapter.requestDevice();
     const compute = new CalculatorCompute(device);
+    let graphRenderer: GraphRenderer | null = null;
 
     // Fetch live CAD→EUR rate, fall back to hardcoded if unavailable.
     let cadToEur = EUR_FALLBACK;
@@ -315,13 +387,17 @@ async function main(): Promise<void> {
     resolveTimingCard('timing-eur', `1 CAD = ${cadToEur.toFixed(4)} EUR`);
 
     // Wire up calc switcher.
-    const select      = document.getElementById('calc-select')  as HTMLSelectElement;
-    const yearsSelect = document.getElementById('years-select') as HTMLSelectElement;
-    const yearsRow    = document.getElementById('years-row')    as HTMLElement;
-    const countSelect = document.getElementById('count-select') as HTMLSelectElement;
+    const select            = document.getElementById('calc-select')         as HTMLSelectElement;
+    const yearsSelect       = document.getElementById('years-select')        as HTMLSelectElement;
+    const yearsRow          = document.getElementById('years-row')           as HTMLElement;
+    const countSelect       = document.getElementById('count-select')        as HTMLSelectElement;
+    const graphPointsSelect = document.getElementById('graph-points-select') as HTMLSelectElement;
+    const graphTypeSelect   = document.getElementById('graph-type-select')   as HTMLSelectElement;
 
-    function getYears(): number { return parseInt(yearsSelect.value, 10); }
-    function getCount(): number { return parseInt(countSelect.value, 10); }
+    function getYears(): number       { return parseInt(yearsSelect.value, 10); }
+    function getCount(): number       { return parseInt(countSelect.value, 10); }
+    function getGraphCount(): number  { return parseInt(graphPointsSelect.value, 10); }
+    function getGraphType(): 'bar' | 'line' { return graphTypeSelect.value as 'bar' | 'line'; }
 
     function showYearsRow(visible: boolean): void {
         yearsRow.style.display = visible ? 'flex' : 'none';
@@ -329,18 +405,27 @@ async function main(): Promise<void> {
 
     function rerunCurrent(): void {
         const isLowest = select.value === 'lowest';
+        const isGraph  = select.value === 'graph';
         showYearsRow(isLowest);
-        if (select.value === 'npv') {
-            runNPV(compute, getCount()).catch(console.error);
-        } else if (isLowest) {
-            runLowest(compute, cadToEur, getYears(), getCount()).catch(console.error);
+        if (isGraph) {
+            if (!graphRenderer) graphRenderer = new GraphRenderer(device, graphCanvas);
+            runGraph(graphRenderer, getGraphCount(), getGraphType()).catch(console.error);
         } else {
-            runString(compute, getCount()).catch(console.error);
+            showGraphMode(false);
+            if (select.value === 'npv') {
+                runNPV(compute, getCount()).catch(console.error);
+            } else if (isLowest) {
+                runLowest(compute, cadToEur, getYears(), getCount()).catch(console.error);
+            } else {
+                runString(compute, getCount()).catch(console.error);
+            }
         }
     }
 
     select.addEventListener('change', rerunCurrent);
     countSelect.addEventListener('change', rerunCurrent);
+    graphPointsSelect.addEventListener('change', rerunCurrent);
+    graphTypeSelect.addEventListener('change', rerunCurrent);
     yearsSelect.addEventListener('change', () => {
         if (select.value === 'lowest') {
             runLowest(compute, cadToEur, getYears(), getCount()).catch(console.error);

@@ -45,9 +45,15 @@ const BASE_PRICES: Record<string, number> = {
     'Lotus Emira V6': 85_000,
 };
 
+export interface GraphPoint {
+    label: string;
+    value: number;
+}
+
 export interface MockData {
     nameplates: string[];
     prices: Float32Array<ArrayBuffer>;
+    graphData: GraphPoint[];
 }
 
 // NPV calc: 1 M entries — arithmetic-heavy enough to offset PCIe round-trip.
@@ -67,5 +73,17 @@ export function generateMockData(count: number): MockData {
         prices[i] = BASE_PRICES[name] + delta;
     }
 
-    return { nameplates, prices };
+    const totals = new Float64Array(NAMEPLATES.length);
+    const counts = new Uint32Array(NAMEPLATES.length);
+    for (let i = 0; i < count; i++) {
+        const idx = i % NAMEPLATES.length;
+        totals[idx] += prices[i];
+        counts[idx]++;
+    }
+    const graphData: GraphPoint[] = NAMEPLATES.map((label, idx) => ({
+        label,
+        value: counts[idx] > 0 ? totals[idx] / counts[idx] : BASE_PRICES[label],
+    }));
+
+    return { nameplates, prices, graphData };
 }
