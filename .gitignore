@@ -8,8 +8,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-WebGlDemo/cpp/world/
-cpp/world/
 dist
 dist-ssr
 *.local

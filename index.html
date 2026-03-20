@@ -1,26 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Alexandre Briere | WebGl Demo</title>
-    <style>
-        * { margin: 0; padding: 0; }
-        body { background: #000; overflow: hidden; }
-        canvas { display: block; }
-    </style>
-</head>
-<!-- index.html (Root) -->
-<script>
-  // Simple redirect if you want a default, or just use it as a landing page
-  const path = window.location.pathname;
-  if (path === '/') {
-    // Optional: Auto-redirect to webgl for now
-    // window.location.href = '/webgl/';
-  }
-</script>
-<body>
-  <h1>Select Version</h1>
-  <a href="/webgl/">Run WebGL Version</a><br>
-  <a href="/webgpu/">Run WebGPU Version</a>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>demo-site</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

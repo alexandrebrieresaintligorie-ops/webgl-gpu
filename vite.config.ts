@@ -1,22 +1,7 @@
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-export default defineConfig(({ command }) => ({
-  root: '.',
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: 'index.html',
-        webgl: './src/webgl/index.html',
-        webgpu: './src/webgpu/index.html',
-        "webgpu/calculator": './src/webgpu/modules/calculator/index.html',
-      },
-    },
-  },
-  server: {
-    headers: command === 'serve' ? {} : {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
-    }
-  }
-}))
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})
