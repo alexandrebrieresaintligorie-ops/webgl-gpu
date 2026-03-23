@@ -5,6 +5,7 @@ import type {
   ComputedMeshOptions, ComputedRenderableHandle,
   Quad2DOptions, Quad2DHandle,
   Quad3DOptions, Quad3DHandle,
+  Model3DOptions, Model3DHandle, ModelAssetHandle,
   CameraOptions,
 } from './types'
 import { Camera } from './core/Camera'
@@ -16,6 +17,9 @@ import { Mesh } from './renderables/Mesh'
 import { Quad2D } from './renderables/Quad2D'
 import { Quad3D } from './renderables/Quad3D'
 import { ComputedRenderable } from './renderables/ComputedRenderable'
+import { Model3D } from './renderables/Model3D'
+import { ModelAsset } from './ModelAsset'
+import { parseObj } from './loaders/parseObj'
 import type { RenderableInitArgs } from './renderables/Renderable'
 
 /** Pool size for per-object uniforms: supports up to 512 renderables. */
@@ -135,6 +139,27 @@ export class Engine {
     q.init(this._initArgs())
     this._scene.add(q)
     return q
+  }
+
+  /**
+   * Fetches and parses a .obj file, uploading its geometry to GPU once.
+   * The returned ModelAssetHandle can be passed to createModel3D() many times.
+   * Non-blocking: the fetch is async; parsing runs synchronously after the response arrives.
+   */
+  async loadModel(url: string): Promise<ModelAssetHandle> {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`loadModel: failed to fetch "${url}" (${response.status})`)
+    const text = await response.text()
+    const { vertices, indices } = parseObj(text)
+    return new ModelAsset(this._renderer.device, this._renderer.queue, vertices, indices)
+  }
+
+  /** Creates a Model3D instance from a loaded ModelAsset. Sync and fast — no GPU buffer upload. */
+  createModel3D(opts: Model3DOptions): Model3DHandle {
+    const model = new Model3D(opts)
+    model.init(this._initArgs())
+    this._scene.add(model)
+    return model
   }
 
   /** Creates a Camera with the given options using the engine's device and camera layout. */

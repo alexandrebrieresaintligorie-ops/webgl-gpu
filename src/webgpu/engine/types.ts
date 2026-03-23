@@ -96,6 +96,39 @@ export interface Quad2DHandle {
   destroy(): void
 }
 
+// ── ModelAsset ─────────────────────────────────────────────────────────────
+
+/** Shared GPU resource produced by engine.loadModel(). Safe to pass to createModel3D() many times. */
+export interface ModelAssetHandle {
+  readonly vertexCount: number
+  readonly indexCount: number
+  destroy(): void
+}
+
+// ── Model3D (world-space static mesh loaded from a file) ───────────────────
+
+export interface Model3DOptions {
+  asset: ModelAssetHandle
+  /** World-space position. Default [0, 0, 0]. */
+  position?: [number, number, number]
+  /** Uniform scale per axis. Default [1, 1, 1]. */
+  scale?: [number, number, number]
+  /** Unit quaternion [x, y, z, w]. Default identity [0, 0, 0, 1]. */
+  quaternion?: [number, number, number, number]
+  /** RGBA tint multiplied with vertex color. Default [1, 1, 1, 1]. */
+  tint?: [number, number, number, number]
+  label?: string
+}
+
+export interface Model3DHandle {
+  visible: boolean
+  setPosition(x: number, y: number, z: number): void
+  setScale(x: number, y: number, z: number): void
+  setQuaternion(x: number, y: number, z: number, w: number): void
+  setTint(r: number, g: number, b: number, a: number): void
+  destroy(): void
+}
+
 // ── Quad3D (world-space, depth-tested) ─────────────────────────────────────
 
 export interface Quad3DOptions {

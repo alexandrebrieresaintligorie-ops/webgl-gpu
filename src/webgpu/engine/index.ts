@@ -14,4 +14,7 @@ export type {
   Quad2DHandle,
   Quad3DOptions,
   Quad3DHandle,
+  ModelAssetHandle,
+  Model3DOptions,
+  Model3DHandle,
 } from './types'
