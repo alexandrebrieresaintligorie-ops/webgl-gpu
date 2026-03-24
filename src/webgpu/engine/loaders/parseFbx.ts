@@ -429,7 +429,7 @@ async function decodeTexture(texNode: FBXReaderNode): Promise<ImageBitmap | null
 
     if (bytes && bytes.length > 0) {
       try {
-        const blob = new Blob([bytes])
+        const blob = new Blob([bytes as BlobPart])
         return await createImageBitmap(blob)
       } catch { /* fall through */ }
     }

@@ -1,4 +1,4 @@
-export { Renderable } from './Renderable'
+export type { Renderable } from './Renderable'
 export type { RenderableInitArgs } from './Renderable'
 export { Mesh } from './Mesh'
 export { ComputedRenderable } from './ComputedRenderable'
