@@ -67,8 +67,10 @@ const engine = await Engine.create(canvas, opts)
 | `engine.createComputedMesh(opts)` | `ComputedRenderableHandle` | GPU compute-generated geometry |
 | `engine.createQuad2D(opts)` | `Quad2DHandle` | Screen-space 2D quad (HUD) |
 | `engine.createQuad3D(opts)` | `Quad3DHandle` | World-space depth-tested quad |
-| `engine.loadModel(url)` | `Promise<ModelAssetHandle>` | Load & upload OBJ model to GPU |
-| `engine.createModel3D(opts)` | `Model3DHandle` | Instance of a loaded model asset |
+| `engine.loadObj(url)` | `Promise<ModelAssetHandle>` | Load & upload OBJ model to GPU |
+| `engine.createModelObj(opts)` | `Model3DHandle` | Instance of a loaded OBJ model asset |
+| `engine.loadFbx(url)` | `Promise<FbxAssetHandle>` | Load & upload FBX model (with textures) to GPU |
+| `engine.createFbxModel(opts)` | `FbxModelHandle` | Instance of a loaded FBX model asset |
 | `engine.createCamera(opts?)` | `Camera` | Create a new camera (not active until `setCamera`) |
 | `engine.setCamera(camera)` | `void` | Switch the active camera |
 | `engine.camera` | `Camera` | Currently active camera |
