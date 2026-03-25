@@ -1,6 +1,6 @@
 import type { ModelAssetHandle, FbxAssetHandle } from '../types'
-import { ModelAsset } from '../ModelAsset'
-import { FbxAsset } from '../FbxAsset'
+import { ModelAsset } from '../renderables/ModelAsset'
+import { FbxAsset } from '../renderables/FbxAsset'
 import { parseObj, parseFbx } from '../loaders'
 import { logger } from './logger'
 
