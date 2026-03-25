@@ -1,45 +1,7 @@
-import { makeTRS } from '../../math/mat4'
+import { makeTRS, identityMat } from '../../math/mat4'
+import { yawPitchToQuat, mulQuat, rotateByQuat } from '../../math/quat'
 
 export type HitboxType = 'cube' | 'sphere' | 'capsule' | 'mesh'
-
-function yawPitchToQuat(yaw: number, pitch: number): [number, number, number, number] {
-  const cy = Math.cos(yaw * 0.5)
-  const sy = Math.sin(yaw * 0.5)
-  const cp = Math.cos(pitch * 0.5)
-  const sp = Math.sin(pitch * 0.5)
-  // qYaw * qPitch
-  return [cy * sp, sy * cp, -sy * sp, cy * cp]
-}
-
-function mulQuat(
-  a: [number, number, number, number],
-  b: [number, number, number, number],
-): [number, number, number, number] {
-  const [ax, ay, az, aw] = a
-  const [bx, by, bz, bw] = b
-  return [
-    aw * bx + ax * bw + ay * bz - az * by,
-    aw * by - ax * bz + ay * bw + az * bx,
-    aw * bz + ax * by - ay * bx + az * bw,
-    aw * bw - ax * bx - ay * by - az * bz,
-  ]
-}
-
-function rotateByQuat(
-  v: [number, number, number],
-  q: [number, number, number, number],
-): [number, number, number] {
-  const [qx, qy, qz, qw] = q
-  const [vx, vy, vz] = v
-  const tx = 2 * (qy * vz - qz * vy)
-  const ty = 2 * (qz * vx - qx * vz)
-  const tz = 2 * (qx * vy - qy * vx)
-  return [
-    vx + qw * tx + qy * tz - qz * ty,
-    vy + qw * ty + qz * tx - qx * tz,
-    vz + qw * tz + qx * ty - qy * tx,
-  ]
-}
 
 export abstract class Hitbox3D {
   offsetTranslation: [number, number, number]
@@ -47,7 +9,7 @@ export abstract class Hitbox3D {
   offsetRotation: [number, number]
 
   /** Column-major mat4 — world transform of this hitbox (no scale). Updated by GameObject each frame. */
-  readonly orientation = new Float32Array(16)
+  readonly orientation: Float32Array = identityMat(4)
 
   constructor(
     offsetTranslation: [number, number, number] = [0, 0, 0],
@@ -55,11 +17,6 @@ export abstract class Hitbox3D {
   ) {
     this.offsetTranslation = offsetTranslation
     this.offsetRotation = offsetRotation
-    // Identity
-    this.orientation[0] = 1
-    this.orientation[5] = 1
-    this.orientation[10] = 1
-    this.orientation[15] = 1
   }
 
   abstract readonly type: HitboxType

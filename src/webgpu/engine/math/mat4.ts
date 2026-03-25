@@ -1,3 +1,13 @@
+/**
+ * Returns a column-major n×n identity matrix as a Float32Array.
+ * e.g. identityMat(4) → 16-element identity mat4.
+ */
+export function identityMat(n: number): Float32Array {
+  const m = new Float32Array(n * n)
+  for (let i = 0; i < n; i++) m[i * n + i] = 1
+  return m
+}
+
 /** Column-major 4×4 matrix multiply: out = a × b */
 export function mul4x4(a: Float32Array, b: Float32Array, out: Float32Array): void {
   for (let col = 0; col < 4; col++) {
