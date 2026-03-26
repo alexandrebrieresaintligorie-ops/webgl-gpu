@@ -25,7 +25,7 @@ export function mul4x4(a: Float32Array, b: Float32Array, out: Float32Array): voi
  * Builds a column-major TRS matrix: out = Translation(position) × Rotation(quaternion) × Scale(scale).
  * quaternion is [x, y, z, w] (unit quaternion).
  */
-export function makeTRS(
+export function makeTransformMatrix(
   position: [number, number, number],
   quaternion: [number, number, number, number],
   scale: [number, number, number],

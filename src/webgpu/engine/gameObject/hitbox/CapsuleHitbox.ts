@@ -17,4 +17,8 @@ export class CapsuleHitbox extends Hitbox3D {
     this.radius = radius
     this.height = height
   }
+
+  clone(): CapsuleHitbox {
+    return new CapsuleHitbox(this.radius, this.height, [...this.offsetTranslation], [...this.offsetRotation])
+  }
 }

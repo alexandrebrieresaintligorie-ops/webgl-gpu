@@ -1,14 +1,16 @@
 import type { Renderable, RenderableInitArgs } from './Renderable'
-import type { ComputedMeshOptions, ComputedRenderableHandle } from '../types'
-import type { Camera } from '../core/Camera'
-import { StorageBuffer } from '../buffers/StorageBuffer'
-import { IndirectBuffer } from '../compute/IndirectBuffer'
-import { ComputePass } from '../compute/ComputePass'
-import type { DispatchSize } from '../compute/ComputePass'
-import type { UniformSlot } from '../buffers/UniformPool'
+import type { ComputedMeshOptions } from '../../types'
+import type { Camera } from '../../core/Camera'
+import { StorageBuffer } from '../../buffers/StorageBuffer'
+import { IndirectBuffer } from '../../compute/IndirectBuffer'
+import { ComputePass } from '../../compute/ComputePass'
+import type { DispatchSize } from '../../compute/ComputePass'
+import type { UniformSlot } from '../../buffers/UniformPool'
 import { MESH_PIPELINE_KEY } from './Mesh'
-import { COMMON } from '../shaders/common'
-import { MESH } from '../shaders/mesh'
+import { COMMON } from '../../shaders/common'
+import { MESH } from '../../shaders/mesh'
+import { makeTransformMatrix } from '../../math'
+import type { Vec3, Vec4 } from '../../math/vec3'
 
 /** Vertex buffer flags: must be readable as both vertex data and storage target. */
 const VERTEX_STORAGE_FLAGS =
@@ -37,7 +39,7 @@ export function createComputeBindGroupLayout(device: GPUDevice): GPUBindGroupLay
   })
 }
 
-export class ComputedRenderable implements Renderable, ComputedRenderableHandle {
+export class ComputedRenderable implements Renderable {
   readonly id = Symbol()
   readonly layer = 'world' as const
   readonly pipelineKey = MESH_PIPELINE_KEY  // shares the mesh render pipeline
@@ -57,6 +59,10 @@ export class ComputedRenderable implements Renderable, ComputedRenderableHandle 
   private _uniformSlot!: UniformSlot
   private _uniformData = new Float32Array(20)  // 16 (model) + 4 (tint = white)
 
+  private _position:   Vec3 = [0, 0, 0]
+  private _quaternion: Vec4 = [0, 0, 0, 1]
+  private _scale:      Vec3 = [1, 1, 1]
+
   // ChunkUniforms data: origin(vec3f), isoLevel(f32), gridDims(vec3u), _pad(u32) = 32 bytes
   private _chunkData = new Float32Array(8)
 
@@ -67,8 +73,7 @@ export class ComputedRenderable implements Renderable, ComputedRenderableHandle 
     this._opts = opts
     this._dispatchSize = opts.dispatchSize
 
-    // Default model = identity, tint = white
-    this._uniformData.set(opts.modelMatrix ?? IDENTITY, 0)
+    this._uniformData.set(IDENTITY, 0)
     this._uniformData.set([1, 1, 1, 1], 16)
 
     // ChunkUniforms
@@ -204,8 +209,30 @@ export class ComputedRenderable implements Renderable, ComputedRenderableHandle 
     this._device.queue.writeBuffer(this._chunkUniformBuf, 0, this._chunkData)
   }
 
+  setPosition(position: Vec3): void {
+    this._position = [...position]
+    this._rebuildMatrix()
+  }
+
+  setQuaternion(quaternion: Vec4): void {
+    this._quaternion = [...quaternion]
+    this._rebuildMatrix()
+  }
+
+  setScale(x: number, y: number, z: number): void {
+    this._scale = [x, y, z]
+    this._rebuildMatrix()
+  }
+
   setModelMatrix(mat: Float32Array): void {
     this._uniformData.set(mat, 0)
+    this._device.queue.writeBuffer(
+      this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData
+    )
+  }
+
+  private _rebuildMatrix(): void {
+    makeTransformMatrix(this._position, this._quaternion, this._scale, this._uniformData)
     this._device.queue.writeBuffer(
       this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData
     )
@@ -214,6 +241,10 @@ export class ComputedRenderable implements Renderable, ComputedRenderableHandle 
   setDispatchSize(x: number, y: number, z: number): void {
     this._dispatchSize = [x, y, z]
     this._computePass.setDispatchSize([x, y, z])
+  }
+
+  clone(): ComputedRenderable {
+    return new ComputedRenderable({ ...this._opts })
   }
 
   destroy(): void {

@@ -13,4 +13,8 @@ export class SphereHitbox extends Hitbox3D {
     super(offsetTranslation, offsetRotation)
     this.radius = radius
   }
+
+  clone(): SphereHitbox {
+    return new SphereHitbox(this.radius, [...this.offsetTranslation], [...this.offsetRotation])
+  }
 }

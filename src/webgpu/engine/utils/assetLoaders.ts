@@ -1,6 +1,6 @@
 import type { ModelAssetHandle, FbxAssetHandle } from '../types'
-import { ModelAsset } from '../renderables/ModelAsset'
-import { FbxAsset } from '../renderables/FbxAsset'
+import { ModelAsset } from '../gameObject/renderables/ModelAsset'
+import { FbxAsset } from '../gameObject/renderables/FbxAsset'
 import { parseObj, parseFbx } from '../loaders'
 
 /** Maximum asset download size (256 MB). Enforced on Content-Length and during streaming. */

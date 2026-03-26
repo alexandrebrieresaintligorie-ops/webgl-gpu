@@ -1,11 +1,12 @@
 import type { Renderable, RenderableInitArgs } from './Renderable'
-import type { Quad3DOptions, Quad3DHandle } from '../types'
-import type { Camera } from '../core/Camera'
-import { VertexBuffer } from '../buffers/VertexBuffer'
-import type { UniformSlot } from '../buffers/UniformPool'
-import { COMMON } from '../shaders/common'
-import { QUAD3D } from '../shaders/quad3d'
-import { cross3, norm3 } from '../math'
+import type { Quad3DOptions } from '../../types'
+import type { Camera } from '../../core/Camera'
+import { VertexBuffer } from '../../buffers/VertexBuffer'
+import type { UniformSlot } from '../../buffers/UniformPool'
+import { COMMON } from '../../shaders/common'
+import { QUAD3D } from '../../shaders/quad3d'
+import { cross3, norm3, makeTransformMatrix } from '../../math'
+import type { Vec3, Vec4 } from '../../math/vec3'
 
 /**
  * Vertex layout: vec3f position + vec4f color = 28 bytes/vertex (padded to 32).
@@ -17,14 +18,8 @@ const QUAD3D_PIPELINE_KEY = 'quad3d'
 
 const QUAD_INDICES = new Uint16Array([0, 1, 2, 2, 3, 0])
 
-const IDENTITY = new Float32Array([
-  1, 0, 0, 0,
-  0, 1, 0, 0,
-  0, 0, 1, 0,
-  0, 0, 0, 1,
-])
 
-export class Quad3D implements Renderable, Quad3DHandle {
+export class Quad3D implements Renderable {
   readonly id = Symbol()
   readonly layer = 'world' as const
   readonly pipelineKey = QUAD3D_PIPELINE_KEY
@@ -39,9 +34,13 @@ export class Quad3D implements Renderable, Quad3DHandle {
   private _device!: GPUDevice
   private _uniformData = new Float32Array(20)  // 16 (model) + 4 (tint)
 
+  private _position:   Vec3 = [0, 0, 0]
+  private _quaternion: Vec4 = [0, 0, 0, 1]
+  private _scale:      Vec3 = [1, 1, 1]
+
   constructor(opts: Quad3DOptions) {
     this._opts = opts
-    IDENTITY.forEach((v, i) => { this._uniformData[i] = v })
+    makeTransformMatrix(this._position, this._quaternion, this._scale, this._uniformData)
     this._uniformData.set(opts.color, 16)
   }
 
@@ -139,8 +138,30 @@ export class Quad3D implements Renderable, Quad3DHandle {
     )
   }
 
+  setPosition(position: Vec3): void {
+    this._position = [...position]
+    this._rebuildMatrix()
+  }
+
+  setQuaternion(quaternion: Vec4): void {
+    this._quaternion = [...quaternion]
+    this._rebuildMatrix()
+  }
+
+  setScale(x: number, y: number, z: number): void {
+    this._scale = [x, y, z]
+    this._rebuildMatrix()
+  }
+
   setModelMatrix(mat: Float32Array): void {
     this._uniformData.set(mat, 0)
+    this._device.queue.writeBuffer(
+      this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData
+    )
+  }
+
+  private _rebuildMatrix(): void {
+    makeTransformMatrix(this._position, this._quaternion, this._scale, this._uniformData)
     this._device.queue.writeBuffer(
       this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData
     )
@@ -151,7 +172,7 @@ export class Quad3D implements Renderable, Quad3DHandle {
    * Chooses a tangent/bitangent pair using the normal and a reference up vector.
    */
   private _buildVerts(o: Quad3DOptions): Float32Array {
-    const [cx, cy, cz] = o.position
+    const [cx, cy, cz] = [0, 0, 0]
     const n = o.normal ?? [0, 1, 0]
     const [nx, ny, nz] = norm3(n)
     const hw = o.width  * 0.5
@@ -184,6 +205,10 @@ export class Quad3D implements Renderable, Quad3DHandle {
       data[base + 7] = a
     }
     return data
+  }
+
+  clone(): Quad3D {
+    return new Quad3D({ ...this._opts })
   }
 
   destroy(): void {

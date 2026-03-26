@@ -1,23 +1,28 @@
 export { Engine } from './Engine'
 export { Camera } from './core/Camera'
 
-// Public option types and handle types
+// GameObject (sole user-facing entity)
+export { GameObject } from './gameObject/GameObject'
+export type { IGameObject } from './gameObject/GameObject'
+
+// Option types for Engine.create*() methods
 export type {
   EngineOptions,
   CameraOptions,
   BindGroupLayouts,
+  GameObjectBaseOptions,
   MeshOptions,
-  MeshHandle,
+  MeshGameObjectOptions,
   ComputedMeshOptions,
-  ComputedRenderableHandle,
+  ComputedMeshGameObjectOptions,
   Quad2DOptions,
-  Quad2DHandle,
+  Quad2DGameObjectOptions,
   Quad3DOptions,
-  Quad3DHandle,
+  Quad3DGameObjectOptions,
   ModelAssetHandle,
   Model3DOptions,
-  Model3DHandle,
+  Model3DGameObjectOptions,
   FbxAssetHandle,
   FbxModelOptions,
-  FbxModelHandle,
+  FbxModelGameObjectOptions,
 } from './types'

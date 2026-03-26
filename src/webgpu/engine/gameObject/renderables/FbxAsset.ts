@@ -1,6 +1,6 @@
-import type { FbxAssetHandle } from '../types'
-import type { ParsedFbxData } from '../loaders/parseFbx'
-import { logger } from '../utils'
+import type { FbxAssetHandle } from '../../types'
+import type { ParsedFbxData } from '../../loaders/parseFbx'
+import { logger } from '../../utils'
 
 export interface FbxMeshSlice {
   vertexBuf: GPUBuffer

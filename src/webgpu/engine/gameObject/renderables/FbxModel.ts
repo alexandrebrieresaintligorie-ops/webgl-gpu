@@ -1,28 +1,30 @@
 import type { Renderable, RenderableInitArgs } from './Renderable'
-import type { Model3DOptions, Model3DHandle } from '../types'
-import type { Camera } from '../core/Camera'
-import type { UniformSlot } from '../buffers/UniformPool'
-import { ModelAsset } from './ModelAsset'
-import { MESH_PIPELINE_KEY } from './Mesh'
-import { COMMON } from '../shaders/common'
-import { MESH } from '../shaders/mesh'
-import { makeTRS } from '../math'
-import type { Vec3, Vec4 } from '../math/vec3'
+import type { FbxModelOptions } from '../../types'
+import type { Camera } from '../../core/Camera'
+import type { UniformSlot } from '../../buffers/UniformPool'
+import { FbxAsset } from './FbxAsset'
+import { COMMON } from '../../shaders/common'
+import { FBX_MESH } from '../../shaders/fbx'
+import { makeTransformMatrix } from '../../math'
+import type { Vec3, Vec4 } from '../../math/vec3'
 
-const BYTES_PER_VERTEX = 48
+export const FBX_PIPELINE_KEY = 'fbx'
+
+// 64 bytes/vertex: pos(12)+pad(4) | normal(12)+pad(4) | uv(8)+pad(8) | tangent(16)
+const BYTES_PER_VERTEX = 64
 
 /**
- * World-space renderable that draws a ModelAsset at a given position/scale/rotation.
- * Shares GPU vertex + index buffers with any other Model3D using the same asset.
- * Only allocates its own 80-byte uniform slot (model matrix + tint).
+ * World-space renderable that draws all mesh slices of an FbxAsset.
+ * Each slice gets its own material bind group (group 2) per draw call.
+ * Shares the same render pipeline across all FbxModel instances.
  */
-export class Model3D implements Renderable, Model3DHandle {
+export class FbxModel implements Renderable {
   readonly id = Symbol()
   readonly layer = 'world' as const
-  readonly pipelineKey = MESH_PIPELINE_KEY
+  readonly pipelineKey = FBX_PIPELINE_KEY
   visible = true
 
-  private readonly _asset: ModelAsset
+  private readonly _asset: FbxAsset
   private readonly _label?: string
   private _uniformSlot!: UniformSlot
   private _objectBindGroup!: GPUBindGroup
@@ -34,17 +36,17 @@ export class Model3D implements Renderable, Model3DHandle {
   private _scale:      [number, number, number]
   private _quaternion: [number, number, number, number]
 
-  // Packed uniform: 16 floats (mat4) + 4 floats (tint) = 80 bytes
+  // 80-byte uniform: mat4 (64B) + tint (16B)
   private _uniformData = new Float32Array(20)
 
-  constructor(opts: Model3DOptions) {
-    this._asset      = opts.asset as ModelAsset
+  constructor(opts: FbxModelOptions) {
+    this._asset      = opts.asset as FbxAsset
     this._label      = opts.label
-    this._position   = opts.position   ?? [0, 0, 0]
-    this._scale      = opts.scale      ?? [1, 1, 1]
-    this._quaternion = opts.quaternion ?? [0, 0, 0, 1]
+    this._position   = [0, 0, 0]
+    this._scale      = [1, 1, 1]
+    this._quaternion = [0, 0, 0, 1]
     const tint = opts.tint ?? [1, 1, 1, 1]
-    makeTRS(this._position, this._quaternion, this._scale, this._uniformData)
+    makeTransformMatrix(this._position, this._quaternion, this._scale, this._uniformData)
     this._uniformData.set(tint, 16)
   }
 
@@ -57,7 +59,7 @@ export class Model3D implements Renderable, Model3DHandle {
     uniformPool.write(this._uniformSlot, this._uniformData)
 
     this._objectBindGroup = device.createBindGroup({
-      label: this._label ? `${this._label}:obj` : 'model3d:obj',
+      label: this._label ? `${this._label}:obj` : 'fbx-model:obj',
       layout: layouts.object,
       entries: [{
         binding: 0,
@@ -70,17 +72,15 @@ export class Model3D implements Renderable, Model3DHandle {
     })
 
     // ── Render pipeline ──────────────────────────────────────────────────────
-    // Reuses MESH_PIPELINE_KEY — same shader and vertex layout as Mesh.ts.
-    // If a Mesh was created first, pipelineCache returns the already-compiled pipeline.
     const shaderModule = device.createShaderModule({
-      label: 'mesh-shader',
-      code: COMMON + '\n' + MESH,
+      label: 'fbx-shader',
+      code: COMMON + '\n' + FBX_MESH,
     })
 
-    this._pipeline = pipelineCache.getOrCreateRender(MESH_PIPELINE_KEY, {
-      label: 'mesh-pipeline',
+    this._pipeline = pipelineCache.getOrCreateRender(FBX_PIPELINE_KEY, {
+      label: 'fbx-pipeline',
       layout: device.createPipelineLayout({
-        bindGroupLayouts: [layouts.camera, layouts.object],
+        bindGroupLayouts: [layouts.camera, layouts.object, layouts.fbxMaterial],
       }),
       vertex: {
         module: shaderModule,
@@ -88,9 +88,10 @@ export class Model3D implements Renderable, Model3DHandle {
         buffers: [{
           arrayStride: BYTES_PER_VERTEX,
           attributes: [
-            { shaderLocation: 0, offset: 0,  format: 'float32x3' },  // position
+            { shaderLocation: 0, offset:  0, format: 'float32x3' },  // position
             { shaderLocation: 1, offset: 16, format: 'float32x3' },  // normal
-            { shaderLocation: 2, offset: 32, format: 'float32x4' },  // color
+            { shaderLocation: 2, offset: 32, format: 'float32x2' },  // uv
+            { shaderLocation: 3, offset: 48, format: 'float32x4' },  // tangent
           ],
         }],
       },
@@ -115,12 +116,15 @@ export class Model3D implements Renderable, Model3DHandle {
   encode(pass: GPURenderPassEncoder, _camera: Camera): void {
     pass.setPipeline(this._pipeline)
     pass.setBindGroup(1, this._objectBindGroup)
-    pass.setVertexBuffer(0, this._asset.vertexBuf)
-    pass.setIndexBuffer(this._asset.indexBuf, 'uint32')
-    pass.drawIndexed(this._asset.indexCount)
+    for (const slice of this._asset.slices) {
+      pass.setBindGroup(2, slice.materialBindGroup)
+      pass.setVertexBuffer(0, slice.vertexBuf)
+      pass.setIndexBuffer(slice.indexBuf, 'uint32')
+      pass.drawIndexed(slice.indexCount)
+    }
   }
 
-  // ── Model3DHandle ────────────────────────────────────────────────────────────
+  // ── FbxModelHandle ───────────────────────────────────────────────────────────
 
   setPosition(position: Vec3): void {
     this._position = [...position]
@@ -147,14 +151,22 @@ export class Model3D implements Renderable, Model3DHandle {
     )
   }
 
+  clone(): FbxModel {
+    return new FbxModel({
+      asset: this._asset,
+      label: this._label,
+      tint: [this._uniformData[16], this._uniformData[17], this._uniformData[18], this._uniformData[19]],
+    })
+  }
+
   destroy(): void {
-    // Vertex/index buffers belong to ModelAsset — do not destroy them here.
+    // Slices (vertex/index buffers + textures) belong to FbxAsset — do not destroy them here.
   }
 
   // ── Private ──────────────────────────────────────────────────────────────────
 
   private _rebuildMatrix(): void {
-    makeTRS(this._position, this._quaternion, this._scale, this._uniformData)
+    makeTransformMatrix(this._position, this._quaternion, this._scale, this._uniformData)
     this._device.queue.writeBuffer(
       this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData,
     )

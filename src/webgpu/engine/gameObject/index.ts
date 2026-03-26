@@ -1,5 +1,5 @@
 export { GameObject } from './GameObject'
-export type { GameObjectOptions, TransformableRenderable } from './GameObject'
+export type { IGameObject, GameObjectOptions } from './GameObject'
 
 export { Hitbox3D } from './hitbox/Hitbox3D'
 export type { HitboxType } from './hitbox/Hitbox3D'

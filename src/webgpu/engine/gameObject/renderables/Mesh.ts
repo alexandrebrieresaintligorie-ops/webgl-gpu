@@ -1,10 +1,12 @@
 import type { Renderable, RenderableInitArgs } from './Renderable'
-import type { MeshOptions, MeshHandle } from '../types'
-import type { Camera } from '../core/Camera'
-import { VertexBuffer } from '../buffers/VertexBuffer'
-import type { UniformSlot } from '../buffers/UniformPool'
-import { COMMON } from '../shaders/common'
-import { MESH } from '../shaders/mesh'
+import type { MeshOptions } from '../../types'
+import type { Camera } from '../../core/Camera'
+import { VertexBuffer } from '../../buffers/VertexBuffer'
+import type { UniformSlot } from '../../buffers/UniformPool'
+import { COMMON } from '../../shaders/common'
+import { MESH } from '../../shaders/mesh'
+import { makeTransformMatrix } from '../../math'
+import type { Vec3, Vec4 } from '../../math/vec3'
 
 const IDENTITY = new Float32Array([
   1, 0, 0, 0,
@@ -18,7 +20,7 @@ const BYTES_PER_VERTEX = 48
 
 export const MESH_PIPELINE_KEY = 'mesh'
 
-export class Mesh implements Renderable, MeshHandle {
+export class Mesh implements Renderable {
   readonly id = Symbol()
   readonly layer = 'world' as const
   readonly pipelineKey = MESH_PIPELINE_KEY
@@ -36,11 +38,13 @@ export class Mesh implements Renderable, MeshHandle {
   private _queue!: GPUQueue
   private _uniformData = new Float32Array(20)  // 16 (mat4) + 4 (tint) = 80 bytes
 
+  private _position:   Vec3 = [0, 0, 0]
+  private _quaternion: Vec4 = [0, 0, 0, 1]
+  private _scale:      Vec3 = [1, 1, 1]
+
   constructor(opts: MeshOptions) {
     this._opts = opts
-    // Pre-fill uniform data with identity model + white tint
-    const model = opts.modelMatrix ?? IDENTITY
-    this._uniformData.set(model, 0)
+    this._uniformData.set(IDENTITY, 0)
     this._uniformData.set([1, 1, 1, 1], 16)
   }
 
@@ -154,8 +158,30 @@ export class Mesh implements Renderable, MeshHandle {
     this._indexCount = data.length
   }
 
+  setPosition(position: Vec3): void {
+    this._position = [...position]
+    this._rebuildMatrix()
+  }
+
+  setQuaternion(quaternion: Vec4): void {
+    this._quaternion = [...quaternion]
+    this._rebuildMatrix()
+  }
+
+  setScale(x: number, y: number, z: number): void {
+    this._scale = [x, y, z]
+    this._rebuildMatrix()
+  }
+
   setModelMatrix(mat: Float32Array): void {
     this._uniformData.set(mat, 0)
+    this._device.queue.writeBuffer(
+      this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData
+    )
+  }
+
+  private _rebuildMatrix(): void {
+    makeTransformMatrix(this._position, this._quaternion, this._scale, this._uniformData)
     this._device.queue.writeBuffer(
       this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData
     )
@@ -169,6 +195,14 @@ export class Mesh implements Renderable, MeshHandle {
     this._device.queue.writeBuffer(
       this._uniformSlot.buffer, this._uniformSlot.offset, this._uniformData
     )
+  }
+
+  clone(): Mesh {
+    return new Mesh({
+      vertices: new Float32Array(this._opts.vertices),
+      indices: this._opts.indices ? new Uint32Array(this._opts.indices) : undefined,
+      label: this._opts.label,
+    })
   }
 
   destroy(): void {

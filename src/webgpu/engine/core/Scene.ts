@@ -1,5 +1,5 @@
-import type { Renderable } from '../renderables/Renderable'
-import { ComputedRenderable } from '../renderables/ComputedRenderable'
+import type { Renderable } from '../gameObject/renderables/Renderable'
+import { ComputedRenderable } from '../gameObject/renderables/ComputedRenderable'
 import { Camera } from './Camera'
 import { Renderer } from './Renderer'
 

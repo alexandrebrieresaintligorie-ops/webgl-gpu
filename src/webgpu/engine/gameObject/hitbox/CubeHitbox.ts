@@ -13,4 +13,8 @@ export class CubeHitbox extends Hitbox3D {
     super(offsetTranslation, offsetRotation)
     this.halfExtents = halfExtents
   }
+
+  clone(): CubeHitbox {
+    return new CubeHitbox([...this.halfExtents], [...this.offsetTranslation], [...this.offsetRotation])
+  }
 }

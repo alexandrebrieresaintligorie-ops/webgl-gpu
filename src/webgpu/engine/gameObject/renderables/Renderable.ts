@@ -1,7 +1,8 @@
-import type { BindGroupLayouts } from '../types'
-import type { Camera } from '../core/Camera'
-import type { PipelineCache } from '../core/PipelineCache'
-import type { UniformPool } from '../buffers/UniformPool'
+import type { BindGroupLayouts } from '../../types'
+import type { Camera } from '../../core/Camera'
+import type { PipelineCache } from '../../core/PipelineCache'
+import type { UniformPool } from '../../buffers/UniformPool'
+import type { Vec3, Vec4 } from '../../math/vec3'
 
 export interface RenderableInitArgs {
   device: GPUDevice
@@ -20,8 +21,14 @@ export interface Renderable {
   readonly pipelineKey: string
   visible: boolean
 
+  setPosition(position: Vec3): void
+  setQuaternion(quaternion: Vec4): void
+  setScale(x: number, y: number, z: number): void
+
   init(args: RenderableInitArgs): void
   encode(pass: GPURenderPassEncoder, camera: Camera): void
+  /** Return a new uninitialized Renderable of the same type and current state. */
+  clone(): Renderable
   destroy(): void
 }
 

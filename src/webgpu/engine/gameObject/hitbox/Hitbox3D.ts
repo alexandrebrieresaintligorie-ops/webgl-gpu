@@ -1,4 +1,4 @@
-import { makeTRS, identityMat } from '../../math/mat4'
+import { makeTransformMatrix, identityMat } from '../../math/mat4'
 import { yawPitchToQuat, mulQuat, rotateByQuat } from '../../math/quat'
 import type { Vec3, Vec4 } from '../../math/vec3'
 
@@ -21,6 +21,7 @@ export abstract class Hitbox3D {
   }
 
   abstract readonly type: HitboxType
+  abstract clone(): Hitbox3D
 
   /** World-space center extracted from orientation matrix. */
   get worldCenter(): Vec3 {
@@ -40,6 +41,6 @@ export abstract class Hitbox3D {
       renderablePosition[1] + rotatedOffset[1],
       renderablePosition[2] + rotatedOffset[2],
     ]
-    makeTRS(worldPos, worldQuat, [1, 1, 1], this.orientation)
+    makeTransformMatrix(worldPos, worldQuat, [1, 1, 1], this.orientation)
   }
 }

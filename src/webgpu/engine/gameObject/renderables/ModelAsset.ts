@@ -1,4 +1,4 @@
-import type { ModelAssetHandle } from '../types'
+import type { ModelAssetHandle } from '../../types'
 
 /**
  * Shared GPU resource for a loaded 3D model.

@@ -53,4 +53,14 @@ export class MeshHitbox extends Hitbox3D {
       (this.localMax[2] - this.localMin[2]) * 0.5,
     ]
   }
+
+  clone(): MeshHitbox {
+    return new MeshHitbox(
+      new Float32Array(0),
+      3,
+      [...this.offsetTranslation],
+      [...this.offsetRotation],
+      { min: [...this.localMin], max: [...this.localMax] },
+    )
+  }
 }
