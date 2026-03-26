@@ -6,6 +6,7 @@ import { FbxAsset } from './FbxAsset'
 import { COMMON } from '../shaders/common'
 import { FBX_MESH } from '../shaders/fbx'
 import { makeTRS } from '../math'
+import type { Vec3, Vec4 } from '../math/vec3'
 
 export const FBX_PIPELINE_KEY = 'fbx'
 
@@ -125,8 +126,8 @@ export class FbxModel implements Renderable, FbxModelHandle {
 
   // ── FbxModelHandle ───────────────────────────────────────────────────────────
 
-  setPosition(x: number, y: number, z: number): void {
-    this._position = [x, y, z]
+  setPosition(position: Vec3): void {
+    this._position = [...position]
     this._rebuildMatrix()
   }
 
@@ -135,8 +136,8 @@ export class FbxModel implements Renderable, FbxModelHandle {
     this._rebuildMatrix()
   }
 
-  setQuaternion(x: number, y: number, z: number, w: number): void {
-    this._quaternion = [x, y, z, w]
+  setQuaternion(quaternion: Vec4): void {
+    this._quaternion = [...quaternion]
     this._rebuildMatrix()
   }
 

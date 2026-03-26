@@ -1,3 +1,5 @@
+import type { Vec3, Vec4 } from './math/vec3'
+
 // ── Engine ─────────────────────────────────────────────────────────────────
 
 export interface EngineOptions {
@@ -123,9 +125,9 @@ export interface Model3DOptions {
 
 export interface Model3DHandle {
   visible: boolean
-  setPosition(x: number, y: number, z: number): void
+  setPosition(position: Vec3): void
   setScale(x: number, y: number, z: number): void
-  setQuaternion(x: number, y: number, z: number, w: number): void
+  setQuaternion(quaternion: Vec4): void
   setTint(r: number, g: number, b: number, a: number): void
   destroy(): void
 }
@@ -155,9 +157,9 @@ export interface FbxModelOptions {
 
 export interface FbxModelHandle {
   visible: boolean
-  setPosition(x: number, y: number, z: number): void
+  setPosition(position: Vec3): void
   setScale(x: number, y: number, z: number): void
-  setQuaternion(x: number, y: number, z: number, w: number): void
+  setQuaternion(quaternion: Vec4): void
   setTint(r: number, g: number, b: number, a: number): void
   destroy(): void
 }

@@ -7,6 +7,7 @@ import { MESH_PIPELINE_KEY } from './Mesh'
 import { COMMON } from '../shaders/common'
 import { MESH } from '../shaders/mesh'
 import { makeTRS } from '../math'
+import type { Vec3, Vec4 } from '../math/vec3'
 
 const BYTES_PER_VERTEX = 48
 
@@ -121,8 +122,8 @@ export class Model3D implements Renderable, Model3DHandle {
 
   // ── Model3DHandle ────────────────────────────────────────────────────────────
 
-  setPosition(x: number, y: number, z: number): void {
-    this._position = [x, y, z]
+  setPosition(position: Vec3): void {
+    this._position = [...position]
     this._rebuildMatrix()
   }
 
@@ -131,8 +132,8 @@ export class Model3D implements Renderable, Model3DHandle {
     this._rebuildMatrix()
   }
 
-  setQuaternion(x: number, y: number, z: number, w: number): void {
-    this._quaternion = [x, y, z, w]
+  setQuaternion(quaternion: Vec4): void {
+    this._quaternion = [...quaternion]
     this._rebuildMatrix()
   }
 
