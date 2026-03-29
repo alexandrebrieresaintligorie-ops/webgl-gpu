@@ -16,7 +16,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        'demo-webgpu': resolve(__dirname, 'demos/webgpu/index.html'),
+        'demo-webgpu':         resolve(__dirname, 'demos/webgpu/index.html'),
+        'demo-webgpu-sandbox': resolve(__dirname, 'demos/webgpu/sandbox/index.html'),
       },
     },
   },

@@ -23,6 +23,7 @@ export interface IGameObject<R extends Renderable = Renderable> {
   /** Apply a relative Euler rotation on top of the current orientation. */
   rotate(yaw: number, pitch: number, roll?: number): void
   setScale(x: number, y: number, z: number): void
+  setColor(r: number, g: number, b: number, a: number): void
 
   // Physics sync (called in the user's game loop)
   syncToPhysics(): void
@@ -113,6 +114,10 @@ export class GameObject<R extends Renderable = Renderable> implements IGameObjec
   setScale(x: number, y: number, z: number): void {
     this.scale = [x, y, z]
     this._applyTransform()
+  }
+
+  setColor(r: number, g: number, b: number, a: number): void {
+    this.renderable.setColor(r, g, b, a)
   }
 
   // ─── Physics sync ─────────────────────────────────────────────────────────

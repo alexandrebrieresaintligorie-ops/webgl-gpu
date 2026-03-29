@@ -141,7 +141,7 @@ export class FbxModel implements Renderable {
     this._rebuildMatrix()
   }
 
-  setTint(r: number, g: number, b: number, a: number): void {
+  setColor(r: number, g: number, b: number, a: number): void {
     this._uniformData[16] = r
     this._uniformData[17] = g
     this._uniformData[18] = b

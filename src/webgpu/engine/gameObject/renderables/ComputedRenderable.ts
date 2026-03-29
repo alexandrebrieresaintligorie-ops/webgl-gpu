@@ -224,6 +224,8 @@ export class ComputedRenderable implements Renderable {
     this._rebuildMatrix()
   }
 
+  setColor(_r: number, _g: number, _b: number, _a: number): void { /* not supported */ }
+
   setModelMatrix(mat: Float32Array): void {
     this._uniformData.set(mat, 0)
     this._device.queue.writeBuffer(
